@@ -1,0 +1,277 @@
+### Finance Dashboard API — Test Suite
+### Compatible with VS Code REST Client extension
+
+# ─── Set your base URL ────────────────────────────────────────────────────────
+@base = http://localhost:3000
+@adminToken    = REPLACE_WITH_ADMIN_TOKEN
+@analystToken  = REPLACE_WITH_ANALYST_TOKEN
+@viewerToken   = REPLACE_WITH_VIEWER_TOKEN
+
+
+### ═══════════════════════════════════════════════════
+###  HEALTH
+### ═══════════════════════════════════════════════════
+
+### Health check
+GET {{base}}/health
+
+
+### ═══════════════════════════════════════════════════
+###  AUTH — Login (run these first, copy tokens above)
+### ═══════════════════════════════════════════════════
+
+### Login as ADMIN → copy token to @adminToken
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@finance.dev",
+  "password": "Admin@123"
+}
+
+###
+
+### Login as ANALYST → copy token to @analystToken
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "analyst@finance.dev",
+  "password": "Analyst@123"
+}
+
+###
+
+### Login as VIEWER → copy token to @viewerToken
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "viewer@finance.dev",
+  "password": "Viewer@123"
+}
+
+###
+
+### Register a new user (open endpoint)
+POST {{base}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@finance.dev",
+  "password": "Test@123",
+  "role": "viewer"
+}
+
+###
+
+### Get own profile (authenticated)
+GET {{base}}/api/auth/me
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ─── Validation Error — missing email ────────────────────
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{
+  "password": "Admin@123"
+}
+
+
+### ═══════════════════════════════════════════════════
+###  USERS — Admin only
+### ═══════════════════════════════════════════════════
+
+### List all users
+GET {{base}}/api/users?page=1&limit=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Get single user (replace :id)
+GET {{base}}/api/users/REPLACE_WITH_USER_ID
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Update user role
+PATCH {{base}}/api/users/REPLACE_WITH_USER_ID
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "role": "analyst"
+}
+
+###
+
+### Deactivate user
+PATCH {{base}}/api/users/REPLACE_WITH_USER_ID/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "inactive"
+}
+
+###
+
+### Delete user
+DELETE {{base}}/api/users/REPLACE_WITH_USER_ID
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ─── RBAC: Viewer tries to list users → 403 ──────────────
+GET {{base}}/api/users
+Authorization: Bearer {{viewerToken}}
+
+
+### ═══════════════════════════════════════════════════
+###  FINANCIAL RECORDS
+### ═══════════════════════════════════════════════════
+
+### Create record (admin)
+POST {{base}}/api/records
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 50000,
+  "type": "income",
+  "category": "Salary",
+  "date": "2026-04-01",
+  "notes": "Monthly salary April 2026"
+}
+
+###
+
+### List all records (any role)
+GET {{base}}/api/records?page=1&limit=10
+Authorization: Bearer {{viewerToken}}
+
+###
+
+### Filter by type
+GET {{base}}/api/records?type=expense&category=Rent
+Authorization: Bearer {{analystToken}}
+
+###
+
+### Filter by date range
+GET {{base}}/api/records?from=2026-01-01&to=2026-03-31
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Search records
+GET {{base}}/api/records?search=salary
+Authorization: Bearer {{analystToken}}
+
+###
+
+### Get single record (replace :id)
+GET {{base}}/api/records/REPLACE_WITH_RECORD_ID
+Authorization: Bearer {{viewerToken}}
+
+###
+
+### Update record (admin)
+PATCH {{base}}/api/records/REPLACE_WITH_RECORD_ID
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 55000,
+  "notes": "Updated salary amount"
+}
+
+###
+
+### Soft delete record (admin)
+DELETE {{base}}/api/records/REPLACE_WITH_RECORD_ID
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ─── RBAC: Viewer tries to create record → 403 ────────────
+POST {{base}}/api/records
+Authorization: Bearer {{viewerToken}}
+Content-Type: application/json
+
+{
+  "amount": 100,
+  "type": "income",
+  "category": "Test",
+  "date": "2026-04-01"
+}
+
+###
+
+### ─── Validation: negative amount → 422 ──────────────────
+POST {{base}}/api/records
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": -500,
+  "type": "income",
+  "category": "Test",
+  "date": "2026-04-01"
+}
+
+###
+
+### ─── Validation: invalid date → 422 ─────────────────────
+POST {{base}}/api/records
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "amount": 100,
+  "type": "income",
+  "category": "Test",
+  "date": "not-a-date"
+}
+
+
+### ═══════════════════════════════════════════════════
+###  DASHBOARD
+### ═══════════════════════════════════════════════════
+
+### Summary (analyst+)
+GET {{base}}/api/dashboard/summary
+Authorization: Bearer {{analystToken}}
+
+###
+
+### Category totals (analyst+)
+GET {{base}}/api/dashboard/categories
+Authorization: Bearer {{analystToken}}
+
+###
+
+### Monthly trends (analyst+)
+GET {{base}}/api/dashboard/trends?period=monthly&limit=6
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Weekly trends
+GET {{base}}/api/dashboard/trends?period=weekly&limit=8
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Recent activity (all roles)
+GET {{base}}/api/dashboard/recent?limit=5
+Authorization: Bearer {{viewerToken}}
+
+###
+
+### ─── RBAC: Viewer tries dashboard/summary → 403 ──────────
+GET {{base}}/api/dashboard/summary
+Authorization: Bearer {{viewerToken}}
